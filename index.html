@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EnviroGuard - Peringatan Dini Bencana</title>
+
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="Untitled-1.json" />
+    <meta name="theme-color" content="#1E293B" />
+    <link rel="apple-touch-icon" href="images/icon-192x192.png" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.292.0/dist/umd/lucide.min.js"></script>
+
+    <style>
+      /* Custom styles for the app */
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #0f172a; /* slate-900 */
+        color: #f1f5f9; /* slate-100 */
+      }
+      #map-container {
+        height: 100%;
+        width: 100%;
+        background-color: #334155;
+      }
+      .sidebar-panel {
+        background-color: rgba(30, 41, 59, 0.8); /* slate-800 with opacity */
+        backdrop-filter: blur(10px);
+        border: 1px solid #334155; /* slate-700 */
+      }
+      .chart-container {
+        background-color: rgba(15, 23, 42, 0.5); /* slate-900 with opacity */
+        border-radius: 0.5rem;
+        padding: 1rem;
+      }
+    </style>
+  </head>
+  <body class="overflow-hidden">
+    <div id="app" class="h-screen w-screen flex flex-col p-4 gap-4">
+      <!-- Header -->
+      <header class="flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-lg p-3 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-emerald-400">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <h1 class="text-xl font-bold text-slate-100">EnviroGuard</h1>
+          <p class="text-sm text-slate-400 hidden md:block">Sistem Peringatan Dini Bencana Hidrometeorologi</p>
+        </div>
+        <nav class="bg-slate-700/50 rounded-md p-1">
+          <a href="#" class="px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-600 rounded-md transition-colors">Beranda</a>
+          <a href="#" class="px-3 py-1.5 text-sm font-medium text-white bg-slate-600 rounded-md transition-colors">Analysis</a>
+          <a href="#" class="px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-600 rounded-md transition-colors">Dashboard</a>
+          <a href="#" class="px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-600 rounded-md transition-colors">Pengaturan</a>
+        </nav>
+      </header>
+
+      <!-- Main Content -->
+      <main class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
+        <!-- Left Sidebar -->
+        <aside class="lg:col-span-3 sidebar-panel rounded-lg p-4 overflow-y-auto space-y-6">
+          <h2 class="text-lg font-semibold border-b border-slate-600 pb-2">Filter & Legenda</h2>
+
+          <!-- Filter Data Section -->
+          <div>
+            <h3 class="font-semibold mb-2">Filter Data</h3>
+            <div class="space-y-3 text-sm">
+              <div>
+                <label for="tipe-bencana" class="block text-slate-400 mb-1">Tipe Bencana</label>
+                <select id="tipe-bencana" class="w-full bg-slate-700 border border-slate-600 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <option value="banjir">Banjir</option>
+                  <option value="tanah-longsor">Tanah Longsor</option>
+                  <option value="rob">Rob</option>
+                </select>
+              </div>
+              <div>
+                <label for="periode" class="block text-slate-400 mb-1">Periode</label>
+                <input type="date" class="w-full bg-slate-700 border border-slate-600 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Legenda Peta Section -->
+          <div>
+            <h3 class="font-semibold mb-2">Legenda Peta</h3>
+            <div class="space-y-1.5 text-sm">
+              <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-yellow-500/50 border border-yellow-400"></span> Rendah</div>
+              <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-orange-500/50 border border-orange-400"></span> Sedang</div>
+              <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-red-500/50 border border-red-400"></span> Tinggi</div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Map -->
+        <section id="map-container" class="lg:col-span-6 rounded-lg overflow-hidden">
+          <iframe id="webmap-iframe" class="w-full h-full border-0" src="" title="Peta WebGIS Interaktif"></iframe>
+        </section>
+
+        <!-- Right Sidebar -->
+        <aside class="lg:col-span-3 sidebar-panel rounded-lg p-4 overflow-y-auto space-y-4">
+          <h2 class="text-lg font-semibold border-b border-slate-600 pb-2">Analysis</h2>
+          <div class="chart-container">
+            <h3 class="text-sm font-medium mb-2 text-slate-300">Persebaran Tingkat Risiko</h3>
+            <canvas id="riskChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h3 class="text-sm font-medium mb-2 text-slate-300">Grafik Tren Peringatan</h3>
+            <canvas id="trendChart"></canvas>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // --- PWA Service Worker Registration ---
+        if ("serviceWorker" in navigator) {
+          window.addEventListener("load", () => {
+            navigator.serviceWorker
+              .register("/Untitled-1.js")
+              .then((registration) => {
+                console.log("ServiceWorker registration successful with scope: ", registration.scope);
+              })
+              .catch((error) => {
+                console.log("ServiceWorker registration failed: ", error);
+              });
+          });
+        }
+
+        // --- Web Map Iframe Logic ---
+
+        // PASTIKAN file HTML dari qgis2web berada di folder yang sama
+        // dengan file index.html ini.
+        const webmapUrls = {
+          banjir: "./qgis2web_2025_10_15-06_34_08_433046/index.html",
+          tanahlongsor: "./qgis2web_2025_10_15-06_34_08_433046/index.html",
+          rob: "./qgis2web_2025_10_15-06_34_08_433046/index.html",
+        };
+
+        const webmapIframe = document.getElementById("webmap-iframe");
+        const disasterSelect = document.getElementById("tipe-bencana");
+
+        function updateWebmap(disasterType) {
+          const url = webmapUrls[disasterType];
+          if (url) {
+            webmapIframe.src = url;
+          } else {
+            console.error("URL untuk tipe bencana '" + disasterType + "' tidak ditemukan.");
+          }
+        }
+
+        // Event listener untuk dropdown
+        disasterSelect.addEventListener("change", (e) => {
+          updateWebmap(e.target.value);
+        });
+
+        // Muat peta awal
+        updateWebmap(disasterSelect.value);
+
+        // --- Chart Initialization (Chart.js) ---
+        const riskChartCtx = document.getElementById("riskChart").getContext("2d");
+        const riskChart = new Chart(riskChartCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Rendah", "Sedang", "Tinggi"],
+            datasets: [
+              {
+                label: "Jumlah Area",
+                data: [5, 9, 17],
+                backgroundColor: ["rgba(234, 179, 8, 0.6)", "rgba(249, 115, 22, 0.6)", "rgba(239, 68, 68, 0.6)"],
+                borderColor: ["#eab300", "#f97316", "#ef4444"],
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  color: "#cbd5e1", // slate-300
+                  boxWidth: 12,
+                },
+              },
+            },
+          },
+        });
+
+        const trendChartCtx = document.getElementById("trendChart").getContext("2d");
+        new Chart(trendChartCtx, {
+          type: "line",
+          data: {
+            labels: ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"],
+            datasets: [
+              {
+                label: "Peringatan Dini Diterbitkan",
+                data: [2, 3, 1, 5, 4, 7, 3],
+                fill: false,
+                borderColor: "#22c55e", // emerald-500
+                tension: 0.1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { color: "#94a3b8" }, // slate-400
+                grid: { color: "rgba(71, 85, 105, 0.5)" },
+              },
+              x: {
+                ticks: { color: "#94a3b8" }, // slate-400
+                grid: { display: false },
+              },
+            },
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+          },
+        });
+
+        // Re-render lucide icons
+        lucide.createIcons();
+      });
+    </script>
+  </body>
+</html>
